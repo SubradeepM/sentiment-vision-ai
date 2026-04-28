@@ -26,7 +26,7 @@
 
 ### 🚀 Live Demo
 
-**[Try Sentiment Vision AI Now](https://YOUR_USERNAME.github.io/sentiment-vision-ai)**
+**[Try Sentiment Vision AI Now](https://SubradeepM.github.io/sentiment-vision-ai)**
 
 ### 📸 How It Works
 
@@ -36,9 +36,4 @@
 4. See instant feedback on your emotional state
 5. Take snapshots to save your analysis
 
-### 💻 Run Locally
-
-```bash
-git clone https://github.com/YOUR_USERNAME/sentiment-vision-ai.git
-cd sentiment-vision-ai
-open index.html
+**[Read Detailed Use Cases →](docs/USE_CASES.md)**
