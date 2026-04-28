@@ -1,0 +1,36 @@
+
+---
+
+## 🎨 Alternative: Create a Separate Documentation Page
+
+If you want these sections to be even more visible, create a `docs/` folder:
+
+### File: `docs/USE_CASES.md`
+
+```markdown
+# 🎯 Use Cases for Sentiment Vision AI
+
+## 1. Market Research
+- Analyze customer reactions to new products
+- Test advertisement effectiveness
+- Measure audience engagement in real-time
+
+## 2. Mental Health Awareness
+- Mood tracking over time
+- Stress detection in workplace settings
+- Therapeutic feedback tools
+
+## 3. Educational Demonstrations
+- Psychology class experiments
+- AI/ML learning examples
+- Human-computer interaction studies
+
+## 4. Interactive Art Installations
+- Art that changes based on viewer emotion
+- Interactive museum exhibits
+- Performance art integration
+
+## 5. Gaming
+- Adaptive difficulty based on player frustration
+- Emotion-powered game mechanics
+- Real-time player feedback

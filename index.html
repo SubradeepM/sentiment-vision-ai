@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>Sentiment Vision - AI Emotion Detector | Real-time Mood Analysis</title>
+    
+    <!-- TensorFlow.js and FaceMesh Model -->
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/facemesh@0.0.3/dist/facemesh.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Poppins', system-ui, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            animation: fadeInDown 0.8s ease;
+        }
+
+        .header h1 {
+            font-size: 3rem;
+            background: linear-gradient(135deg, #fff, #ffe6f0);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header p {
+            color: rgba(255,255,255,0.9);
+            font-size: 1.1rem;
+            margin-top: 10px;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 800px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .card {
+            background: rgba(255,255,255,0.95);
+            border-radius: 32px;
+            padding: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #333;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            border-left: 4px solid #764ba2;
+            padding-left: 15px;
+        }
+
+        .video-container {
+            position: relative;
+            border-radius: 20px;
+            overflow: hidden;
+            background: #000;
+            margin-bottom: 20px;
+        }
+
+        video, canvas {
+            width: 100%;
+            height: auto;
+            border-radius: 20px;
+            display: block;
+        }
+
+        #outputCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 60px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.95rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: scale(1.02);
+            box-shadow: 0 8px 20px rgba(102,126,234,0.4);
+        }
+
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-success {
+            background: #27ae60;
+            color: white;
+        }
+
+        .emotion-card {
+            background: linear-gradient(135deg, #f5f7fa, #fff);
+            border-radius: 20px;
+            padding: 20px;
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .current-emotion {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 10px 0;
+            padding: 20px;
+            border-radius: 20px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .emotion-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        .stat-item {
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: #666;
+        }
+
+        .stat-value {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: #764ba2;
+        }
+
+        .confidence-badge {
+            background: #27ae60;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            display: inline-block;
+        }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            flex-direction: column;
+            color: white;
+        }
+
+        .spinner {
+            width: 60px;
+            height: 60px;
+            border: 5px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeInDown {
+            from {
+                opacity: 0;
+                transform: translateY(-30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        footer {
+            text-align: center;
+            color: rgba(255,255,255,0.7);
+            margin-top: 40px;
+            font-size: 0.9rem;
+        }
+
+        .emotion-emoji {
+            font-size: 4rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <h3 style="margin-top: 20px;">🤖 Loading AI Model...</h3>
+    <p style="margin-top: 10px;">Initializing FaceMesh for emotion detection</p>
+</div>
+
+<div class="container">
+    <div class="header">
+        <h1>🎭 Sentiment Vision AI</h1>
+        <p>Real-time Facial Expression & Emotion Detection | Powered by TensorFlow.js</p>
+    </div>
+
+    <div class="main-grid">
+        <!-- Camera Section -->
+        <div class="card">
+            <div class="card-title">
+                📹 Live Camera Feed
+            </div>
+            <div class="video-container">
+                <video id="video" width="640" height="480" autoplay playsinline style="width:100%; height:auto;"></video>
+                <canvas id="outputCanvas" width="640" height="480"></canvas>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" id="startBtn">🎥 Start Camera</button>
+                <button class="btn btn-danger" id="stopBtn">⏹️ Stop Camera</button>
+                <button class="btn btn-success" id="snapshotBtn">📸 Take Snapshot</button>
+            </div>
+            <div id="cameraStatus" style="margin-top: 15px; font-size: 0.9rem; color: #555;"></div>
+        </div>
+
+        <!-- Emotion Analysis Section -->
+        <div class="card">
+            <div class="card-title">
+                🧠 AI Emotion Analysis
+            </div>
+            <div class="emotion-card">
+                <div class="emotion-emoji" id="emotionEmoji">😐</div>
+                <div class="current-emotion" id="currentEmotion">Waiting for face...</div>
+                <div id="confidence" class="confidence-badge">Confidence: 0%</div>
+            </div>
+            
+            <div class="emotion-stats" id="emotionStats">
+                <div class="stat-item">
+                    <div class="stat-label">😊 Happy</div>
+                    <div class="stat-value" id="happyStat">0%</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">😢 Sad</div>
+                    <div class="stat-value" id="sadStat">0%</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">😲 Surprised</div>
+                    <div class="stat-value" id="surpriseStat">0%</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">😠 Angry</div>
+                    <div class="stat-value" id="angryStat">0%</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-label">😐 Neutral</div>
+                    <div class="stat-value" id="neutralStat">0%</div>
+                </div>
+            </div>
+
+            <div style="margin-top: 20px; padding: 15px; background: #f0f0f0; border-radius: 16px;">
+                <p style="font-size: 0.85rem; color: #666;">
+                    📊 <strong>AI Insights:</strong> The system analyzes facial landmarks in real-time to detect emotions.
+                    Works best in good lighting with your face clearly visible.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        ⚡ Real-time AI Emotion Detection | Privacy-friendly - All processing happens locally in your browser<br>
+        🎭 Detects: Happy, Sad, Surprised, Angry, Neutral expressions
+    </footer>
+</div>
+
+<script>
+    // Emotion detection using facial landmarks
+    let model = null;
+    let stream = null;
+    let animationId = null;
+    let video = document.getElementById('video');
+    let canvas = document.getElementById('outputCanvas');
+    let ctx = canvas.getContext('2d');
+    
+    // Emotion probabilities (simulated from facial features)
+    let emotionScores = {
+        happy: 0,
+        sad: 0,
+        surprised: 0,
+        angry: 0,
+        neutral: 0
+    };
+    
+    // Face detection variables
+    let lastFaceMesh = null;
+    
+    // Load FaceMesh model
+    async function loadModel() {
+        const overlay = document.getElementById('loadingOverlay');
+        overlay.style.display = 'flex';
+        
+        try {
+            model = await facemesh.load({
+                maxFaces: 1,
+                inputResolution: { width: 640, height: 480 },
+                scale: 0.8
+            });
+            document.getElementById('cameraStatus').innerHTML = '✅ AI Model loaded successfully! Click "Start Camera"';
+            console.log('FaceMesh model loaded');
+        } catch (err) {
+            console.error('Error loading model:', err);
+            document.getElementById('cameraStatus').innerHTML = '❌ Error loading AI model. Please refresh the page.';
+        } finally {
+            overlay.style.display = 'none';
+        }
+    }
+    
+    // Start camera
+    async function startCamera() {
+        try {
+            stream = await navigator.mediaDevices.getUserMedia({ 
+                video: { width: 640, height: 480 },
+                audio: false 
+            });
+            video.srcObject = stream;
+            await video.play();
+            
+            document.getElementById('cameraStatus').innerHTML = '✅ Camera active | AI analyzing emotions...';
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            
+            // Start detection loop
+            detectFaces();
+        } catch (err) {
+            console.error('Camera error:', err);
+            document.getElementById('cameraStatus').innerHTML = '❌ Cannot access camera. Please check permissions.';
+        }
+    }
+    
+    // Stop camera
+    function stopCamera() {
+        if (stream) {
+            stream.getTracks().forEach(track => track.stop());
+            stream = null;
+        }
+        if (animationId) {
+            cancelAnimationFrame(animationId);
+            animationId = null;
+        }
+        video.srcObject = null;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        document.getElementById('cameraStatus').innerHTML = '⏹️ Camera stopped. Click "Start Camera" to resume.';
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('stopBtn').disabled = true;
+        
+        // Reset emotions
+        resetEmotions();
+    }
+    
+    // Reset emotion display
+    function resetEmotions() {
+        document.getElementById('currentEmotion').innerHTML = 'Waiting for face...';
+        document.getElementById('emotionEmoji').innerHTML = '😐';
+        document.getElementById('confidence').innerHTML = 'Confidence: 0%';
+        document.getElementById('happyStat').innerHTML = '0%';
+        document.getElementById('sadStat').innerHTML = '0%';
+        document.getElementById('surpriseStat').innerHTML = '0%';
+        document.getElementById('angryStat').innerHTML = '0%';
+        document.getElementById('neutralStat').innerHTML = '0%';
+    }
+    
+    // Analyze emotion from facial landmarks
+    function analyzeEmotion(landmarks) {
+        // Extract key facial features
+        const leftEye = landmarks[33];
+        const rightEye = landmarks[263];
+        const leftMouth = landmarks[61];
+        const rightMouth = landmarks[291];
+        const topMouth = landmarks[13];
+        const bottomMouth = landmarks[14];
+        const leftEyebrow = landmarks[105];
+        const rightEyebrow = landmarks[334];
+        
+        // Calculate metrics
+        const eyeWidth = Math.abs(rightEye[0] - leftEye[0]);
+        const mouthWidth = Math.abs(rightMouth[0] - leftMouth[0]);
+        const mouthHeight = Math.abs(bottomMouth[1] - topMouth[1]);
+        const eyebrowHeight = (leftEyebrow[1] + rightEyebrow[1]) / 2;
+        
+        // Emotion detection logic
+        let scores = {
+            happy: 0,
+            sad: 0,
+            surprised: 0,
+            angry: 0,
+            neutral: 0
+        };
+        
+        // Happy: wider mouth, raised eyebrows
+        if (mouthWidth > eyeWidth * 0.8 && mouthHeight > 0.1) {
+            scores.happy += 0.7;
+        }
+        if (eyebrowHeight < 0.4) {
+            scores.happy += 0.3;
+        }
+        
+        // Surprised: open mouth, raised eyebrows
+        if (mouthHeight > 0.15) {
+            scores.surprised += 0.6;
+        }
+        if (eyebrowHeight < 0.3) {
+            scores.surprised += 0.4;
+        }
+        
+        // Sad: downturned mouth, lowered eyebrows
+        if (mouthHeight < 0.05 && mouthWidth < eyeWidth * 0.6) {
+            scores.sad += 0.6;
+        }
+        if (eyebrowHeight > 0.5) {
+            scores.sad += 0.4;
+        }
+        
+        // Angry: furrowed brows, tight mouth
+        if (eyebrowHeight > 0.45 && mouthWidth < eyeWidth * 0.5) {
+            scores.angry += 0.7;
+        }
+        if (mouthHeight < 0.03) {
+            scores.angry += 0.3;
+        }
+        
+        // Neutral: moderate values
+        scores.neutral = Math.max(0, 1 - (scores.happy + scores.sad + scores.surprised + scores.angry));
+        
+        // Normalize
+        let total = scores.happy + scores.sad + scores.surprised + scores.angry + scores.neutral;
+        if (total > 0) {
+            scores.happy = (scores.happy / total) * 100;
+            scores.sad = (scores.sad / total) * 100;
+            scores.surprised = (scores.surprised / total) * 100;
+            scores.angry = (scores.angry / total) * 100;
+            scores.neutral = (scores.neutral / total) * 100;
+        }
+        
+        return scores;
+    }
+    
+    // Get emotion label from scores
+    function getEmotionLabel(scores) {
+        const emotions = [
+            { name: 'Happy', value: scores.happy, emoji: '😊' },
+            { name: 'Sad', value: scores.sad, emoji: '😢' },
+            { name: 'Surprised', value: scores.surprised, emoji: '😲' },
+            { name: 'Angry', value: scores.angry, emoji: '😠' },
+            { name: 'Neutral', value: scores.neutral, emoji: '😐' }
+        ];
+        
+        const maxEmotion = emotions.reduce((max, e) => e.value > max.value ? e : max, emotions[0]);
+        return maxEmotion;
+    }
+    
+    // Draw facial landmarks on canvas
+    function drawLandmarks(landmarks) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Draw face mesh points
+        ctx.fillStyle = '#00ff00';
+        ctx.strokeStyle = '#00ff00';
+        ctx.lineWidth = 1;
+        
+        for (let i = 0; i < landmarks.length; i++) {
+            const [x, y] = landmarks[i];
+            ctx.beginPath();
+            ctx.arc(x, y, 2, 0, 2 * Math.PI);
+            ctx.fill();
+        }
+        
+        // Draw connections (simplified)
+        ctx.beginPath();
+        ctx.strokeStyle = '#00ffaa';
+        for (let i = 0; i < landmarks.length - 1; i++) {
+            if (i % 5 === 0) { // Draw some connections for visualization
+                const [x1, y1] = landmarks[i];
+                const [x2, y2] = landmarks[i+1];
+                ctx.beginPath();
+                ctx.moveTo(x1, y1);
+                ctx.lineTo(x2, y2);
+                ctx.stroke();
+            }
+        }
+    }
+    
+    // Main face detection loop
+    async function detectFaces() {
+        if (!model || !video.videoWidth) {
+            animationId = requestAnimationFrame(detectFaces);
+            return;
+        }
+        
+        // Set canvas dimensions
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        // Detect faces
+        const predictions = await model.estimateFaces(video, false);
+        
+        if (predictions.length > 0) {
+            const face = predictions[0];
+            const landmarks = face.scaledMesh;
+            
+            // Draw landmarks
+            drawLandmarks(landmarks);
+            
+            // Analyze emotion
+            const scores = analyzeEmotion(landmarks);
+            const dominant = getEmotionLabel(scores);
+            
+            // Update UI with smooth transitions
+            updateEmotionUI(dominant, scores);
+        } else {
+            // No face detected
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            document.getElementById('currentEmotion').innerHTML = 'No face detected';
+            document.getElementById('emotionEmoji').innerHTML = '🔍';
+            document.getElementById('confidence').innerHTML = 'Confidence: 0%';
+        }
+        
+        animationId = requestAnimationFrame(detectFaces);
+    }
+    
+    // Update UI with emotion data
+    function updateEmotionUI(emotion, scores) {
+        // Update main display
+        document.getElementById('currentEmotion').innerHTML = emotion.name;
+        document.getElementById('emotionEmoji').innerHTML = emotion.emoji;
+        
+        // Update confidence (based on highest score)
+        const confidence = Math.max(scores.happy, scores.sad, scores.surprised, scores.angry, scores.neutral);
+        document.getElementById('confidence').innerHTML = `Confidence: ${Math.round(confidence)}%`;
+        
+        // Update stat bars
+        document.getElementById('happyStat').innerHTML = `${Math.round(scores.happy)}%`;
+        document.getElementById('sadStat').innerHTML = `${Math.round(scores.sad)}%`;
+        document.getElementById('surpriseStat').innerHTML = `${Math.round(scores.surprised)}%`;
+        document.getElementById('angryStat').innerHTML = `${Math.round(scores.angry)}%`;
+        document.getElementById('neutralStat').innerHTML = `${Math.round(scores.neutral)}%`;
+        
+        // Add animation effect
+        const emotionDiv = document.getElementById('currentEmotion');
+        emotionDiv.style.animation = 'none';
+        setTimeout(() => {
+            emotionDiv.style.animation = 'pulse 1s';
+        }, 10);
+    }
+    
+    // Take snapshot
+    function takeSnapshot() {
+        if (!video.videoWidth) {
+            alert('Please start the camera first!');
+            return;
+        }
+        
+        const snapshotCanvas = document.createElement('canvas');
+        snapshotCanvas.width = video.videoWidth;
+        snapshotCanvas.height = video.videoHeight;
+        const snapshotCtx = snapshotCanvas.getContext('2d');
+        snapshotCtx.drawImage(video, 0, 0, snapshotCanvas.width, snapshotCanvas.height);
+        
+        // Add emotion text overlay
+        const emotion = document.getElementById('currentEmotion').innerHTML;
+        snapshotCtx.font = 'bold 30px Arial';
+        snapshotCtx.fillStyle = '#fff';
+        snapshotCtx.shadowColor = 'black';
+        snapshotCtx.shadowBlur = 5;
+        snapshotCtx.fillText(`Emotion: ${emotion}`, 20, 50);
+        
+        // Download
+        const link = document.createElement('a');
+        link.download = `sentiment-${Date.now()}.png`;
+        link.href = snapshotCanvas.toDataURL();
+        link.click();
+        
+        document.getElementById('cameraStatus').innerHTML = '📸 Snapshot saved! Check your downloads folder.';
+        setTimeout(() => {
+            if (stream) {
+                document.getElementById('cameraStatus').innerHTML = '✅ Camera active | AI analyzing emotions...';
+            }
+        }, 3000);
+    }
+    
+    // Event listeners
+    document.getElementById('startBtn').onclick = startCamera;
+    document.getElementById('stopBtn').onclick = stopCamera;
+    document.getElementById('snapshotBtn').onclick = takeSnapshot;
+    
+    // Initialize
+    loadModel();
+    
+    // Disable stop button initially
+    document.getElementById('stopBtn').disabled = true;
+</script>
+</body>
+</html>
