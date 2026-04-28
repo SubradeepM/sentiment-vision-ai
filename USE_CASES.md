@@ -1,13 +1,3 @@
-
----
-
-## 🎨 Alternative: Create a Separate Documentation Page
-
-If you want these sections to be even more visible, create a `docs/` folder:
-
-### File: `docs/USE_CASES.md`
-
-```markdown
 # 🎯 Use Cases for Sentiment Vision AI
 
 ## 1. Market Research
